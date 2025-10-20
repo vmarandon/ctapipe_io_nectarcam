@@ -974,6 +974,23 @@ class NectarCAMEventSource(EventSource):
         # Unpack FEB counters and trigger pattern
         if self.load_feb_info:
             self.unpack_feb_data(event_container, event, nectarcam_data)
+    
+        # Fill information of the trigger mask
+        if self.pre_v6_data:
+            ## before v6, then the information is in the trigger_pattern field
+            event_container.trigger_mask = np.any(event_container.trigger_pattern,axis=0)
+        else:
+            ## if v6 and version>6.12 --> pixel status contain the trigger info
+            try:
+                if self.nectarcam_service.idaq_version>="v6.12":
+                    #print("HERE")
+                    event_container.trigger_mask = (event_container.pixel_status & 0xE0).astype(bool)
+                else:
+                    ## Fallback to the old method
+                    event_container.trigger_mask = np.any(event_container.trigger_pattern,axis=0)
+            except Exception as err:
+                ## What should I do in this case...?
+                pass
 
     def fill_trigger_info(self, array_event):
         tel_id = self.tel_id
